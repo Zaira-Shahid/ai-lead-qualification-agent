@@ -1,0 +1,454 @@
+{
+  "name": "Lead Qualification Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-qualified",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1f30f472-2b0b-4c2d-91dc-1fea54c6e929",
+      "name": "Webhook",
+      "webhookId": "96547254-6b75-49ec-a4b9-3e0389646f7c"
+    },
+    {
+      "parameters": {
+        "jsCode": "// The Webhook node nests the actual POST body under `.body`.\nconst item = ($input.first().json && $input.first().json.body) || {};\n\nconst requiredFields = ['lead_id', 'qualification_status', 'lead_score', 'requires_human_review'];\nconst missingFields = requiredFields.filter((f) => item[f] === undefined || item[f] === null);\n\nconst validStatuses = ['qualified', 'needs_review', 'unqualified'];\nconst statusValid = validStatuses.includes(item.qualification_status);\n\nconst scoreValid = typeof item.lead_score === 'number' && item.lead_score >= 0 && item.lead_score <= 100;\n\nconst errors = [];\nfor (const field of missingFields) {\n  errors.push(`Missing required field: ${field}`);\n}\nif (!statusValid && item.qualification_status !== undefined) {\n  errors.push(`Invalid qualification_status: ${item.qualification_status}`);\n}\nif (!scoreValid && item.lead_score !== undefined) {\n  errors.push(`Invalid lead_score: ${item.lead_score}`);\n}\n\nconst isValid = errors.length === 0;\n\nreturn [\n  {\n    json: {\n      ...item,\n      isValid,\n      validationErrors: errors,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "2c1f65b7-674a-4f2c-8d10-9dec823f1c18",
+      "name": "Validate Input"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4e4f5697-b618-4d51-a093-77fffa296a96",
+              "leftValue": "={{$json.isValid}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        0
+      ],
+      "id": "347333a0-27b9-41d1-8fe7-5c40de51648f",
+      "name": "Payload Valid?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        672,
+        150
+      ],
+      "id": "54580d19-8b35-4cf5-9d2c-e811e8b40c6d",
+      "name": "Invalid Payload"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "3e2fc984-4761-448f-a2a9-3d1bbb2f0e34",
+                    "leftValue": "={{$json.qualification_status}}",
+                    "rightValue": "qualified",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a3eef811-0cb2-4aba-84a1-300dcf61cd7f",
+                    "leftValue": "={{$json.qualification_status}}",
+                    "rightValue": "needs_review",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "1fe1ec4d-243c-44fd-a3ef-9d9036b7fa53",
+                    "leftValue": "={{$json.qualification_status}}",
+                    "rightValue": "unqualified",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        672,
+        -80
+      ],
+      "id": "d0091891-af7f-46f4-968b-222f801ca55f",
+      "name": "Branch by Qualification Status"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bf37112a-4f4c-4f29-b31e-8b6ea4df79ca",
+              "name": "action",
+              "value": "save_confirm_lead",
+              "type": "string"
+            },
+            {
+              "id": "92c5f926-9a02-409d-9fde-7201ef9b6650",
+              "name": "qualification_status",
+              "value": "={{$json.qualification_status}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        896,
+        -220
+      ],
+      "id": "9e18dc47-5ba6-4258-a623-5992fbc01b81",
+      "name": "Save/Confirm Lead (Qualified)"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9e9935b4-70de-47d4-8696-0cab47ffc7b4",
+              "name": "action",
+              "value": "notify_team",
+              "type": "string"
+            },
+            {
+              "id": "36699bd3-5720-4713-8ebf-18f16ad3d356",
+              "name": "message",
+              "value": "=New qualified lead. Name: {{$json.name}}, Service: {{$json.service}}, Score: {{$json.lead_score}}. Ready for booking.",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1120,
+        -220
+      ],
+      "id": "431164b2-7a22-4aa7-8e3d-0585ebe9ac71",
+      "name": "Notify Team"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        -220
+      ],
+      "id": "2e590e4c-0a6c-4e1e-940d-9b09172792db",
+      "name": "Human/Booking Handoff"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a7a28650-76aa-4a00-a983-cb237e8fac99",
+              "name": "action",
+              "value": "save_confirm_lead",
+              "type": "string"
+            },
+            {
+              "id": "19801372-d081-4c9b-ab86-677079e6aef4",
+              "name": "qualification_status",
+              "value": "={{$json.qualification_status}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        896,
+        0
+      ],
+      "id": "6e046b53-0896-4358-a25e-5994cd0c09ba",
+      "name": "Save/Confirm Lead (Needs Review)"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5241713a-9401-4770-9b0e-8a9d2ed69516",
+              "name": "action",
+              "value": "notify_human_review",
+              "type": "string"
+            },
+            {
+              "id": "16952aeb-63bc-4237-94bd-015d843979d5",
+              "name": "message",
+              "value": "=New lead requires review. Name: {{$json.name}}, Service: {{$json.service}}, Score: {{$json.lead_score}}. Please review before contacting the lead.",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "ede9fd17-f4a6-4e4f-a0d5-5bf5c89e74e1",
+      "name": "Notify Human (Needs Review)"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "807e783d-f00d-41dc-96f3-d34660348e8f",
+              "name": "action",
+              "value": "save_confirm_lead",
+              "type": "string"
+            },
+            {
+              "id": "42c649bd-fe2d-4bba-9894-887b3b6f7af8",
+              "name": "qualification_status",
+              "value": "={{$json.qualification_status}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        896,
+        220
+      ],
+      "id": "41d695b7-c4de-4be0-883f-a154bfd4b853",
+      "name": "Save/Confirm Lead (Unqualified)"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        220
+      ],
+      "id": "584338c6-3b2b-476b-ad8a-2dbe84152296",
+      "name": "Follow-up"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Payload Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Payload Valid?": {
+      "main": [
+        [
+          {
+            "node": "Branch by Qualification Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invalid Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Branch by Qualification Status": {
+      "main": [
+        [
+          {
+            "node": "Save/Confirm Lead (Qualified)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save/Confirm Lead (Needs Review)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save/Confirm Lead (Unqualified)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save/Confirm Lead (Qualified)": {
+      "main": [
+        [
+          {
+            "node": "Notify Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Team": {
+      "main": [
+        [
+          {
+            "node": "Human/Booking Handoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save/Confirm Lead (Needs Review)": {
+      "main": [
+        [
+          {
+            "node": "Notify Human (Needs Review)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save/Confirm Lead (Unqualified)": {
+      "main": [
+        [
+          {
+            "node": "Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
