@@ -35,9 +35,10 @@ class ChatResponse(BaseModel):
 
 
 # In-memory conversation session store. Each session holds the chat history
-# (for AI context) and the lead fields extracted so far. This does not
-# persist across process restarts; qualification results are persisted to
-# the Lead database separately, in a later phase.
+# (for AI context) and the lead fields/AI evidence flags extracted so far.
+# This does not persist across process restarts; POST /api/qualify reads
+# from this store and persists the qualification result to the Lead
+# database.
 _SESSIONS: Dict[str, dict] = {}
 
 
@@ -46,6 +47,10 @@ def _new_session() -> dict:
         "messages": [],
         "lead": {},
         "is_emergency": False,
+        "booking_intent": False,
+        "budget_is_suitable": False,
+        "timeline_is_suitable": False,
+        "conversation_summary": "",
     }
 
 
@@ -77,6 +82,10 @@ def chat(request: ChatRequest):
 
     session["messages"].append({"role": "assistant", "content": ai_response.reply})
     _merge_lead_data(session["lead"], ai_response.lead.model_dump())
+    session["booking_intent"] = ai_response.booking_intent
+    session["budget_is_suitable"] = ai_response.budget_is_suitable
+    session["timeline_is_suitable"] = ai_response.timeline_is_suitable
+    session["conversation_summary"] = ai_response.conversation_summary
 
     if ai_response.is_emergency:
         session["is_emergency"] = True
