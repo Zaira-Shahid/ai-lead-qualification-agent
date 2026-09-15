@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NovaCare AI Assistant</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <h1>NovaCare AI Assistant</h1>
+      <p class="subtitle">Chat with us to book your consultation</p>
+    </header>
+
+    <main id="messages" class="messages" aria-live="polite"></main>
+
+    <div id="error-banner" class="error-banner" hidden></div>
+
+    <div id="qualification-panel" class="qualification-panel" hidden>
+      <h2>Qualification Result</h2>
+      <dl>
+        <dt>Score</dt>
+        <dd id="qual-score">-</dd>
+        <dt>Status</dt>
+        <dd id="qual-status">-</dd>
+        <dt>Human review needed</dt>
+        <dd id="qual-review">-</dd>
+      </dl>
+    </div>
+
+    <form id="chat-form" class="chat-form">
+      <input
+        id="chat-input"
+        type="text"
+        placeholder="Type your message..."
+        autocomplete="off"
+        required
+      />
+      <button id="send-button" type="submit">Send</button>
+    </form>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
