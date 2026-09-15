@@ -23,7 +23,8 @@ class LeadResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    name: str
+    session_id: Optional[str] = None
+    name: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
     service: Optional[str] = None
