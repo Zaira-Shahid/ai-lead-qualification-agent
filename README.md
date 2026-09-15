@@ -114,4 +114,8 @@ curl -X POST http://localhost:5678/webhook-test/lead-qualified \
 
 This workflow was built and verified against a real local n8n instance (v2.33.7): all three qualification branches and the invalid-payload path were exercised with live webhook calls and confirmed to route and produce output correctly before being committed here.
 
-Once `N8N_WEBHOOK_URL` (see `.env.example`) points at your running n8n instance's webhook URL, the backend can be wired to POST the qualification result there after `/api/qualify` completes — that integration is not yet implemented in the backend as of this phase.
+### Backend integration
+
+After `POST /api/qualify` computes and persists the qualification result, the backend automatically calls `N8N_WEBHOOK_URL` (see `.env.example`) with the Section 23 payload shape (`lead_id`, `name`, `email`, `phone`, `service`, `lead_score`, `qualification_status`, `requires_human_review`). This is implemented in `app/services/notification_service.py` and wired into `app/api/qualify.py`.
+
+If n8n is unreachable, times out, or returns a non-2xx response, the failure is logged (`n8n_webhook_failed`) and `/api/qualify` still returns its normal response — a webhook problem never breaks the qualification result the caller sees. This was verified by qualifying a live session with n8n running (confirmed received and executed in n8n's editor) and again with n8n stopped (confirmed the API still returned 200 and the failure was logged).

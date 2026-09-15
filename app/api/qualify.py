@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.api.chat import _SESSIONS
 from app.database.database import get_db
-from app.services import lead_service
+from app.services import lead_service, notification_service
 from app.services.qualification_service import qualify_lead, service_matches_clinic_offering
 
 logger = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ def qualify(request: QualifyRequest, db: Session = Depends(get_db)):
         timeline_is_suitable=session.get("timeline_is_suitable", False),
     )
 
-    lead_service.save_qualified_lead(
+    lead = lead_service.save_qualified_lead(
         db,
         session_id=request.session_id,
         lead_data=lead_data,
@@ -59,6 +59,25 @@ def qualify(request: QualifyRequest, db: Session = Depends(get_db)):
     logger.info(
         "qualification_completed session_id=%s status=%s", request.session_id, result.qualification_status
     )
+
+    try:
+        notification_service.send_qualification_webhook(
+            {
+                "lead_id": lead.id,
+                "name": lead.name,
+                "email": lead.email,
+                "phone": lead.phone,
+                "service": lead.service,
+                "lead_score": result.lead_score,
+                "qualification_status": result.qualification_status,
+                "requires_human_review": result.requires_human_review,
+            }
+        )
+    except Exception:
+        # notification_service already catches and logs its own failures;
+        # this is a last-resort safety net so a webhook problem can never
+        # prevent the qualification response from being returned.
+        logger.error("n8n_webhook_call_site_failed session_id=%s", request.session_id)
 
     return QualifyResponse(
         lead_score=result.lead_score,
