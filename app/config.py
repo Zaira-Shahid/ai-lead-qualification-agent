@@ -18,3 +18,21 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./leads.db")
 N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL", "http://localhost:5678/webhook/lead-qualified")
 
 NOTIFICATION_EMAIL = os.getenv("NOTIFICATION_EMAIL", "team@example.com")
+
+# Deterministic lead qualification scoring, per PROJECT_SPEC.md Section 9.
+SCORING_RULES = {
+    "valid_contact": 10,
+    "clear_service": 20,
+    "service_match": 20,
+    "booking_intent": 20,
+    "suitable_budget": 15,
+    "suitable_timeline": 15,
+}
+
+QUALIFIED_THRESHOLD = 80
+REVIEW_THRESHOLD = 50
+
+# Clinic services offered, per PROJECT_SPEC.md Section 3. Used to determine
+# whether a requested service matches a clinic offering (keyword match,
+# case-insensitive) independent of the AI's own service_matches_clinic flag.
+CLINIC_SERVICE_KEYWORDS = ["general", "dental", "cosmetic", "physiotherapy", "skin"]
