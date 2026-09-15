@@ -5,7 +5,7 @@ from typing import Dict, List
 
 from openai import OpenAI, OpenAIError
 
-from app.config import OPENAI_API_KEY, OPENAI_MODEL
+from app.config import GROQ_API_KEY, GROQ_BASE_URL, OPENAI_API_KEY, OPENAI_MODEL
 from app.schemas.ai_response import AIResponse
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,10 @@ _client: OpenAI | None = None
 def _get_client() -> OpenAI:
     global _client
     if _client is None:
-        _client = OpenAI(api_key=OPENAI_API_KEY, max_retries=0)
+        if GROQ_API_KEY:
+            _client = OpenAI(api_key=GROQ_API_KEY, base_url=GROQ_BASE_URL, max_retries=0)
+        else:
+            _client = OpenAI(api_key=OPENAI_API_KEY, max_retries=0)
     return _client
 
 
