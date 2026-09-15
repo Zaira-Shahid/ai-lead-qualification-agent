@@ -1,6 +1,8 @@
 fastapi
 uvicorn[standard]
 pydantic
+email-validator
+sqlalchemy
 python-dotenv
 openai
 pytest
