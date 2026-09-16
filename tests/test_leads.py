@@ -1,6 +1,8 @@
 from fastapi.testclient import TestClient
 
+from app.api import leads as leads_module
 from app.main import app
+from app.services.lead_service import LeadServiceError
 
 client = TestClient(app)
 
@@ -38,3 +40,25 @@ def test_get_lead():
 def test_get_lead_not_found():
     response = client.get("/api/leads/999999")
     assert response.status_code == 404
+
+
+def test_create_lead_returns_500_on_database_failure(monkeypatch):
+    def raise_error(db, lead_data):
+        raise LeadServiceError("simulated failure")
+
+    monkeypatch.setattr(leads_module.lead_service, "create_lead", raise_error)
+
+    response = client.post("/api/leads", json={"name": "Sarah"})
+
+    assert response.status_code == 500
+
+
+def test_get_lead_returns_500_on_database_failure(monkeypatch):
+    def raise_error(db, lead_id):
+        raise LeadServiceError("simulated failure")
+
+    monkeypatch.setattr(leads_module.lead_service, "get_lead", raise_error)
+
+    response = client.get("/api/leads/1")
+
+    assert response.status_code == 500

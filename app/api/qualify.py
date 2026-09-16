@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.api.chat import _SESSIONS
 from app.database.database import get_db
 from app.services import lead_service, notification_service
+from app.services.lead_service import LeadServiceError
 from app.services.qualification_service import qualify_lead, service_matches_clinic_offering
 
 logger = logging.getLogger(__name__)
@@ -44,17 +45,20 @@ def qualify(request: QualifyRequest, db: Session = Depends(get_db)):
         timeline_is_suitable=session.get("timeline_is_suitable", False),
     )
 
-    lead = lead_service.save_qualified_lead(
-        db,
-        session_id=request.session_id,
-        lead_data=lead_data,
-        booking_intent=session.get("booking_intent", False),
-        service_matches_clinic=service_matches_clinic_offering(lead_data.get("service")),
-        budget_is_suitable=session.get("budget_is_suitable", False),
-        timeline_is_suitable=session.get("timeline_is_suitable", False),
-        conversation_summary=session.get("conversation_summary", ""),
-        result=result,
-    )
+    try:
+        lead = lead_service.save_qualified_lead(
+            db,
+            session_id=request.session_id,
+            lead_data=lead_data,
+            booking_intent=session.get("booking_intent", False),
+            service_matches_clinic=service_matches_clinic_offering(lead_data.get("service")),
+            budget_is_suitable=session.get("budget_is_suitable", False),
+            timeline_is_suitable=session.get("timeline_is_suitable", False),
+            conversation_summary=session.get("conversation_summary", ""),
+            result=result,
+        )
+    except LeadServiceError:
+        raise HTTPException(status_code=500, detail="Failed to save qualification result. Please try again.")
 
     logger.info(
         "qualification_completed session_id=%s status=%s", request.session_id, result.qualification_status

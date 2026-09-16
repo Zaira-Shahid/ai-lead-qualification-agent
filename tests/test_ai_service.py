@@ -119,3 +119,31 @@ def test_get_ai_response_api_failure_raises_service_error(monkeypatch):
 
     with pytest.raises(ai_service.AIServiceError):
         ai_service.get_ai_response([{"role": "user", "content": "hi"}])
+
+
+def test_get_ai_response_none_content_raises_service_error_not_unhandled(monkeypatch):
+    # Regression test: a None message.content (e.g. from content filtering)
+    # previously raised an uncaught TypeError from json.loads(None), escaping
+    # the bounded-retry loop entirely instead of resulting in AIServiceError.
+    def fake_create(**kwargs):
+        return _FakeCompletion(None)
+
+    _patch_client(monkeypatch, fake_create)
+
+    with pytest.raises(ai_service.AIServiceError):
+        ai_service.get_ai_response([{"role": "user", "content": "hi"}])
+
+
+def test_get_ai_response_empty_choices_raises_service_error_not_unhandled(monkeypatch):
+    # Regression test: an empty choices list previously raised an uncaught
+    # IndexError from response.choices[0], escaping the bounded-retry loop.
+    class _EmptyChoicesCompletion:
+        choices = []
+
+    def fake_create(**kwargs):
+        return _EmptyChoicesCompletion()
+
+    _patch_client(monkeypatch, fake_create)
+
+    with pytest.raises(ai_service.AIServiceError):
+        ai_service.get_ai_response([{"role": "user", "content": "hi"}])

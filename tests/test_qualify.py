@@ -150,6 +150,20 @@ def test_qualify_succeeds_even_if_webhook_raises_unexpectedly(monkeypatch):
     assert data["qualification_status"] == "qualified"
 
 
+def test_qualify_returns_500_on_database_failure(monkeypatch):
+    from app.services.lead_service import LeadServiceError
+
+    def raise_error(db, **kwargs):
+        raise LeadServiceError("simulated failure")
+
+    monkeypatch.setattr(qualify_module.lead_service, "save_qualified_lead", raise_error)
+
+    session_id = _make_session()
+    response = client.post("/api/qualify", json={"session_id": session_id})
+
+    assert response.status_code == 500
+
+
 def test_qualify_missing_required_info_downgrades_to_needs_review():
     session_id = _make_session(
         lead={
