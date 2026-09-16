@@ -44,7 +44,15 @@ def _call_openai(messages: List[Dict[str, str]]) -> str:
         timeout=REQUEST_TIMEOUT_SECONDS,
     )
     logger.info("ai_response_received")
-    return response.choices[0].message.content
+
+    if not response.choices:
+        raise ValueError("AI response contained no choices")
+
+    content = response.choices[0].message.content
+    if not content:
+        raise ValueError("AI response content was empty")
+
+    return content
 
 
 def get_ai_response(conversation_messages: List[Dict[str, str]]) -> AIResponse:
@@ -65,7 +73,7 @@ def get_ai_response(conversation_messages: List[Dict[str, str]]) -> AIResponse:
     for attempt in range(1, MAX_AI_ATTEMPTS + 1):
         try:
             raw_content = _call_openai(messages)
-        except OpenAIError as exc:
+        except (OpenAIError, ValueError, IndexError, TypeError) as exc:
             logger.error("ai_request_failed attempt=%s error_type=%s", attempt, type(exc).__name__)
             last_error = exc
             continue
@@ -73,7 +81,7 @@ def get_ai_response(conversation_messages: List[Dict[str, str]]) -> AIResponse:
         try:
             parsed = json.loads(raw_content)
             return AIResponse.model_validate(parsed)
-        except (json.JSONDecodeError, ValueError) as exc:
+        except (json.JSONDecodeError, ValueError, TypeError) as exc:
             logger.error("ai_response_invalid attempt=%s", attempt)
             last_error = exc
             messages.append({"role": "assistant", "content": raw_content})
